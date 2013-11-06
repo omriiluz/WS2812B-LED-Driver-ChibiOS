@@ -1,6 +1,13 @@
 # Object files
 *.o
 *.ko
+*.lst
+*.elf
+*.hex
+*.bin
+*.dmp
+*.map
+*.o.d
 
 # Libraries
 *.lib

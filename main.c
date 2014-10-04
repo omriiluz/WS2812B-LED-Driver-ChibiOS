@@ -65,7 +65,7 @@ int main(void) {
   /*
    * Initialize LedDriver - 150 leds in chain, GPIOA pin 1
    */
-  ledDriverInit(150, GPIOA, 0b00000010, &o_fb);
+  ledDriverInit(30, GPIOA, GPIOA_PIN1, &o_fb);
   testPatternFB(o_fb);
 
   /*

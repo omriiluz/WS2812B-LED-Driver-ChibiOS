@@ -28,30 +28,21 @@ static msg_t Thread1(void *arg) {
   (void)arg;
   chRegSetThreadName("blinker");
   while (TRUE) {
-    palSetPad(GPIOE, GPIOE_LED3_RED);
+    palSetPad(GPIOD, GPIOD_LED4);
     chThdSleepMilliseconds(100);
-    palClearPad(GPIOE, GPIOE_LED3_RED);
-    palSetPad(GPIOE, GPIOE_LED5_ORANGE);
+    palClearPad(GPIOD, GPIOD_LED4);
+
+    palSetPad(GPIOD, GPIOD_LED3);
     chThdSleepMilliseconds(100);
-    palClearPad(GPIOE, GPIOE_LED5_ORANGE);
-    palSetPad(GPIOE, GPIOE_LED7_GREEN);
+    palClearPad(GPIOD, GPIOD_LED3);
+
+    palSetPad(GPIOD, GPIOD_LED5);
     chThdSleepMilliseconds(100);
-    palClearPad(GPIOE, GPIOE_LED7_GREEN);
-    palSetPad(GPIOE, GPIOE_LED9_BLUE);
+    palClearPad(GPIOD, GPIOD_LED5);
+
+    palSetPad(GPIOD, GPIOD_LED6);
     chThdSleepMilliseconds(100);
-    palClearPad(GPIOE, GPIOE_LED9_BLUE);
-    palSetPad(GPIOE, GPIOE_LED10_RED);
-    chThdSleepMilliseconds(100);
-    palClearPad(GPIOE, GPIOE_LED10_RED);
-    palSetPad(GPIOE, GPIOE_LED8_ORANGE);
-    chThdSleepMilliseconds(100);
-    palClearPad(GPIOE, GPIOE_LED8_ORANGE);
-    palSetPad(GPIOE, GPIOE_LED6_GREEN);
-    chThdSleepMilliseconds(100);
-    palClearPad(GPIOE, GPIOE_LED6_GREEN);
-    palSetPad(GPIOE, GPIOE_LED4_BLUE);
-    chThdSleepMilliseconds(100);
-    palClearPad(GPIOE, GPIOE_LED4_BLUE);
+    palClearPad(GPIOD, GPIOD_LED6);
   }
 }
 

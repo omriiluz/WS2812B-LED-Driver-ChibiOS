@@ -27,7 +27,9 @@ static msg_t Thread1(void *arg) {
 
   (void)arg;
   chRegSetThreadName("blinker");
+  bool testPad = false;
   while (TRUE) {
+
     palSetPad(GPIOD, GPIOD_LED4);
     chThdSleepMilliseconds(100);
     palClearPad(GPIOD, GPIOD_LED4);
@@ -43,6 +45,7 @@ static msg_t Thread1(void *arg) {
     palSetPad(GPIOD, GPIOD_LED6);
     chThdSleepMilliseconds(100);
     palClearPad(GPIOD, GPIOD_LED6);
+
   }
 }
 
@@ -65,7 +68,7 @@ int main(void) {
   /*
    * Initialize LedDriver - 150 leds in chain, GPIOA pin 1
    */
-  ledDriverInit(30, GPIOA, GPIOA_PIN1, &o_fb);
+  ledDriverInit(30, GPIOA, 0b00000010, &o_fb);
   testPatternFB(o_fb);
 
   /*

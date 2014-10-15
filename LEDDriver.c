@@ -51,8 +51,8 @@ void ledDriverInit(int leds, GPIO_TypeDef *port, uint32_t mask, uint8_t **o_fb) 
   // configure pwm timers -
   // timer 2 as master, active for data transmission and inactive to disable transmission during reset period (50uS)
   // timer 3 as slave, during active time creates a 1.25 uS signal, with duty cycle controlled by frame buffer values
-  static PWMConfig pwmc2 = {72000000 / 90, /* 800Khz PWM clock frequency. 1/90 of PWMC3   */
-                            (72000000 / 90) * 0.05, /*Total period is 50ms (20FPS), including sLeds cycles + reset length for ws2812b and FB writes  */
+  static PWMConfig pwmc2 = {168000000 / 210, /* 800Khz PWM clock frequency. 1/210 of PWMC3   */
+                            (168000000 / 210) * 0.05, /*Total period is 50ms (20FPS), including sLeds cycles + reset length for ws2812b and FB writes  */
                             NULL,
                             { {PWM_OUTPUT_ACTIVE_HIGH, NULL},
                               {PWM_OUTPUT_DISABLED, NULL},
@@ -61,8 +61,8 @@ void ledDriverInit(int leds, GPIO_TypeDef *port, uint32_t mask, uint8_t **o_fb) 
                               TIM_CR2_MMS_2, /* master mode selection */
                               0, };
   /* master mode selection */
-  static PWMConfig pwmc3 = {72000000,/* 72Mhz PWM clock frequency.   */
-                            90, /* 90 cycles period (1.25 uS per period @72Mhz       */
+  static PWMConfig pwmc3 = {168000000,/* 168Mhz PWM clock frequency.   */
+                            210, /* 210 cycles period (1.25 uS per period @168Mhz       */
                             NULL,
                             { {PWM_OUTPUT_ACTIVE_HIGH, NULL},
                               {PWM_OUTPUT_ACTIVE_HIGH, NULL},

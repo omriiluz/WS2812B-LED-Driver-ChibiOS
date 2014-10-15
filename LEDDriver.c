@@ -50,9 +50,10 @@ void ledDriverInit(int leds, GPIO_TypeDef *port, uint32_t mask, uint8_t **o_fb) 
 
   // configure pwm timers -
   // timer 2 as master, active for data transmission and inactive to disable transmission during reset period (50uS)
-  // timer 3 as slave, during active time creates a 1.25 uS signal, with duty cycle controlled by frame buffer values
-  static PWMConfig pwmc2 = {168000000 / 210, /* 800Khz PWM clock frequency. 1/210 of PWMC3   */
-                            (168000000 / 210) * 0.05, /*Total period is 50ms (20FPS), including sLeds cycles + reset length for ws2812b and FB writes  */
+  // timer 1 as slave, during active time creates a 1.25 uS signal, with duty cycle controlled by frame buffer values
+  // Peripheral clock is configured to half of full clock of 168Mhz)
+  static PWMConfig pwmc2 = {168000000 / 2 / 105, /* 800Khz PWM clock frequency. 1/105 of PWMC3   */
+                            (168000000 / 2 / 105) * 0.05, /*Total period is 50ms (20FPS), including sLeds cycles + reset length for ws2812b and FB writes  */
                             NULL,
                             { {PWM_OUTPUT_ACTIVE_HIGH, NULL},
                               {PWM_OUTPUT_DISABLED, NULL},
@@ -61,8 +62,8 @@ void ledDriverInit(int leds, GPIO_TypeDef *port, uint32_t mask, uint8_t **o_fb) 
                               TIM_CR2_MMS_2, /* master mode selection */
                               0, };
   /* master mode selection */
-  static PWMConfig pwmc3 = {168000000,/* 168Mhz PWM clock frequency.   */
-                            210, /* 210 cycles period (1.25 uS per period @168Mhz       */
+  static PWMConfig pwmc1 = {168000000 / 2,/* 168Mhz PWM clock frequency.   */
+                            105, /* 210 cycles period (1.25 uS per period @168Mhz       */
                             NULL,
                             { {PWM_OUTPUT_ACTIVE_HIGH, NULL},
                               {PWM_OUTPUT_ACTIVE_HIGH, NULL},
@@ -77,55 +78,61 @@ void ledDriverInit(int leds, GPIO_TypeDef *port, uint32_t mask, uint8_t **o_fb) 
   int j;
   for (j = 0; j < (sLeds) * 24; j++) fb[j] = 0;
   dma_source[0] = sMask;
-  // DMA stream 2, triggered by channel3 pwm signal. if FB indicates, reset output value early to indicate "0" bit to ws2812
-  dmaStreamAllocate(STM32_DMA1_STREAM2, 10, NULL, NULL);
-  dmaStreamSetPeripheral(STM32_DMA1_STREAM2, &(sPort->BSRR.H.clear));
-  dmaStreamSetMemory0(STM32_DMA1_STREAM2, fb);
-  dmaStreamSetTransactionSize(STM32_DMA1_STREAM2, (sLeds) * 24);
+  // DMA stream 6(2), triggered by channel3 pwm1 signal. if FB indicates, reset output value early to indicate "0" bit to ws2812
+  dmaStreamAllocate(STM32_DMA2_STREAM6, 10, NULL, NULL);
+  dmaStreamSetPeripheral(STM32_DMA2_STREAM6, &(sPort->BSRR.H.clear));
+  dmaStreamSetMemory0(STM32_DMA2_STREAM6, fb);
+  dmaStreamSetTransactionSize(STM32_DMA2_STREAM6, (sLeds) * 24);
   dmaStreamSetMode(
-      STM32_DMA1_STREAM2,
+      STM32_DMA2_STREAM6,
       STM32_DMA_CR_DIR_M2P | STM32_DMA_CR_MINC | STM32_DMA_CR_PSIZE_BYTE
-      | STM32_DMA_CR_MSIZE_BYTE | STM32_DMA_CR_CIRC | STM32_DMA_CR_PL(2));
-  // DMA stream 3, triggered by pwm update event. output high at beginning of signal
-  dmaStreamAllocate(STM32_DMA1_STREAM3, 10, NULL, NULL);
-  dmaStreamSetPeripheral(STM32_DMA1_STREAM3, &(sPort->BSRR.H.set));
-  dmaStreamSetMemory0(STM32_DMA1_STREAM3, dma_source);
-  dmaStreamSetTransactionSize(STM32_DMA1_STREAM3, 1);
+      | STM32_DMA_CR_MSIZE_BYTE | STM32_DMA_CR_CIRC | STM32_DMA_CR_PL(2)
+      | STM32_DMA_CR_CHSEL(6));
+  // DMA stream 5(2), triggered by pwm3 update event. output high at beginning of signal
+  dmaStreamAllocate(STM32_DMA2_STREAM5, 10, NULL, NULL);
+  dmaStreamSetPeripheral(STM32_DMA2_STREAM5, &(sPort->BSRR.H.set));
+  dmaStreamSetMemory0(STM32_DMA2_STREAM5, dma_source);
+  dmaStreamSetTransactionSize(STM32_DMA2_STREAM5, 1);
   dmaStreamSetMode(
-      STM32_DMA1_STREAM3, STM32_DMA_CR_TEIE |
+      STM32_DMA2_STREAM5, STM32_DMA_CR_TEIE |
       STM32_DMA_CR_DIR_M2P | STM32_DMA_CR_PSIZE_BYTE | STM32_DMA_CR_MSIZE_BYTE
-      | STM32_DMA_CR_CIRC | STM32_DMA_CR_PL(3));
-  // DMA stream 6, triggered by channel1 update event. reset output value late to indicate "1" bit to ws2812.
-  // always triggers but no affect if dma stream 2 already change output value to 0
-  dmaStreamAllocate(STM32_DMA1_STREAM6, 10, NULL, NULL);
-  dmaStreamSetPeripheral(STM32_DMA1_STREAM6, &(sPort->BSRR.H.clear));
-  dmaStreamSetMemory0(STM32_DMA1_STREAM6, dma_source);
-  dmaStreamSetTransactionSize(STM32_DMA1_STREAM6, 1);
+      | STM32_DMA_CR_CIRC | STM32_DMA_CR_PL(3)
+      | STM32_DMA_CR_CHSEL(6));
+  // DMA stream 1(2), triggered by channel1 update event. reset output value late to indicate "1" bit to ws2812.
+  // always triggers but no affect if dma stream 6 already change output value to 0
+  dmaStreamAllocate(STM32_DMA2_STREAM1, 10, NULL, NULL);
+  dmaStreamSetPeripheral(STM32_DMA2_STREAM1, &(sPort->BSRR.H.clear));
+  dmaStreamSetMemory0(STM32_DMA2_STREAM1, dma_source);
+  dmaStreamSetTransactionSize(STM32_DMA2_STREAM1, 1);
   dmaStreamSetMode(
-      STM32_DMA1_STREAM6,
+      STM32_DMA2_STREAM1,
       STM32_DMA_CR_DIR_M2P | STM32_DMA_CR_PSIZE_BYTE | STM32_DMA_CR_MSIZE_BYTE
-      | STM32_DMA_CR_CIRC | STM32_DMA_CR_PL(3));
+      | STM32_DMA_CR_CIRC | STM32_DMA_CR_PL(3)
+      | STM32_DMA_CR_CHSEL(6));
   pwmStart(&PWMD2, &pwmc2);
-  pwmStart(&PWMD3, &pwmc3);
-  // set pwm3 as slave, triggerd by pwm2 oc1 event. disables pwmd2 for synchronization.
-  PWMD3.tim->SMCR |= TIM_SMCR_SMS_0 | TIM_SMCR_SMS_2 | TIM_SMCR_TS_0;
+  palSetPadMode(GPIOA, 15, PAL_MODE_ALTERNATE(1));
+  pwmStart(&PWMD1, &pwmc1);
+  pwmEnableChannel(&PWMD1, 0, 68);
+
+  // set pwm1 as slave, triggerd by pwm2 oc1 event. disables pwmd2 for synchronization.
+  PWMD1.tim->SMCR |= TIM_SMCR_SMS_0 | TIM_SMCR_SMS_2 | TIM_SMCR_TS_0;
   PWMD2.tim->CR1 &= ~TIM_CR1_CEN;
   // set pwm values.
-  // 28 (duty in ticks) / 90 (period in ticks) * 1.25uS (period in S) = 0.39 uS
-  pwmEnableChannel(&PWMD3, 2, 28);
-  // 58 (duty in ticks) / 90 (period in ticks) * 1.25uS (period in S) = 0.806 uS
-  pwmEnableChannel(&PWMD3, 0, 58);
-  // active during transfer of 90 cycles * sLeds * 24 bytes * 1/90 multiplier
-  pwmEnableChannel(&PWMD2, 0, 90 * sLeds * 24 / 90);
+  // 33 (duty in ticks) / 105 (period in ticks) * 1.25uS (period in S) = 0.39 uS
+  pwmEnableChannel(&PWMD1, 2, 33);
+  // 68 (duty in ticks) / 105 (period in ticks) * 1.25uS (period in S) = 0.806 uS
+  pwmEnableChannel(&PWMD1, 0, 68);
+  // active during transfer of 105 cycles * sLeds * 24 bytes * 1/105 multiplier
+  pwmEnableChannel(&PWMD2, 0, 105 * sLeds * 24 / 105);
   // stop and reset counters for synchronization
   PWMD2.tim->CNT = 0;
-  // Slave (TIM3) needs to "update" immediately after master (TIM2) start in order to start in sync.
+  // Slave (TIM1) needs to "update" immediately after master (TIM2) start in order to start in sync.
   // this initial sync is crucial for the stability of the run
-  PWMD3.tim->CNT = 89;
-  PWMD3.tim->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC1DE | TIM_DIER_UDE;
-  dmaStreamEnable(STM32_DMA1_STREAM3);
-  dmaStreamEnable(STM32_DMA1_STREAM6);
-  dmaStreamEnable(STM32_DMA1_STREAM2);
+  PWMD1.tim->CNT = 104;
+  PWMD1.tim->DIER |= TIM_DIER_CC3DE | TIM_DIER_CC1DE | TIM_DIER_UDE;
+  dmaStreamEnable(STM32_DMA2_STREAM5);
+  dmaStreamEnable(STM32_DMA2_STREAM1);
+  dmaStreamEnable(STM32_DMA2_STREAM6);
   // all systems go! both timers and all channels are configured to resonate
   // in complete sync without any need for CPU cycles (only DMA and timers)
   // start pwm2 for system to start resonating

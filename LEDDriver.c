@@ -132,6 +132,9 @@ void ledDriverInit(int leds, GPIO_TypeDef *port, uint32_t mask, uint8_t **o_fb) 
   PWMD2.tim->CR1 |= TIM_CR1_CEN;
 }
 
+void ledDriverWaitCycle(){
+  while (PWMD2.tim->CNT < 90 * sLeds * 24 / 90){chThdSleepMicroseconds(1);};
+}
 
 void testPatternFB(uint8_t *fb){
   int i;
